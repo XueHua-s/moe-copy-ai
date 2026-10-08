@@ -1,71 +1,145 @@
-# Repository Guidelines
+# moe-copy-ai — Agent Collaboration Guide
 
-## Project Structure & Module Organization
+Unified project context, skill-loading protocol, and collaboration guidelines for all AI agents (Claude Code, Cursor, Windsurf, Copilot, and general-purpose LLM agents).
 
-This is a Plasmo-based browser extension. Entry points live at `popup.tsx`, `sidepanel.tsx`, and `options.tsx`. Background and content scripts are in `background/` and `contents/`. Shared UI and logic live in `components/`, `hooks/`, `utils/`, and `styles/`. Static assets and docs are in `assets/` and `docs/`. Localization files are under `locales/`. Build outputs land in `build/` (do not edit by hand).
+---
 
-## Assistant Operating Principles
+## 1. Project Overview
 
-- Prioritize explicit rules and constraints before convenience or preferences.
-- Classify tasks as trivial/moderate/complex; use a Plan -> Code workflow for moderate/complex tasks with options, tradeoffs, risks, and verification.
-- Ask clarifying questions only when missing info would change the main solution; otherwise proceed with reasonable assumptions.
-- Make minimal, reviewable changes; list touched files and intent; state how to verify; proactively fix mistakes you introduced.
-- Warn before destructive actions; offer safer alternatives; avoid history rewrites unless explicitly requested.
-- For non-trivial work, respond with direct conclusion first, brief reasoning, options if any, and next steps.
+**moe-copy-ai** is a Plasmo-based Chrome extension for AI-powered web content extraction with mobile browser support.
 
-## Build, Test, and Development Commands
+Core architecture:
+- **UI Entry Points** (`popup.tsx`, `sidepanel.tsx`, `options.tsx`): React-based user interfaces
+- **Background** (`background/`): Extension lifecycle, message handlers via Plasmo messaging
+- **Content Scripts** (`contents/`): DOM injection, element selection, scraping
+- **Components** (`components/`): React UI organized by feature (ai, batch, extraction, sidepanel, popup, option, ui)
+- **Hooks** (`hooks/`): React custom hooks for state management and business logic orchestration
+- **Utils** (`utils/`): Core business logic (extractor, AI service, storage, pipeline, workers)
+- **Constants** (`constants/`): Configuration, types, theme definitions
 
-- `pnpm dev`: start the Plasmo dev server; load `build/chrome-mv3-dev` in your browser.
-- `pnpm dev:firefox`: run the Firefox MV3 dev build.
-- `pnpm build`: produce production bundles for Chrome.
-- `pnpm build:firefox`: build Firefox MV3 and run the post-build script.
-- `pnpm package` / `pnpm package:firefox`: create store-ready packages.
-- `pnpm lint` / `pnpm lint:fix`: run Biome checks (and autofix).
-- `pnpm test`, `pnpm test:run`, `pnpm test:ui`: run Vitest in watch, CI, or UI modes.
+Data flow: UI → Hooks → Utils → Chrome APIs / AI Service / Workers
 
-## Coding Style & Naming Conventions
+---
 
-TypeScript + React are standard. Formatting and linting are enforced by Biome with 2-space indentation, double quotes, 80-column line width, and semicolons as needed. Organize imports (Biome does this automatically). Follow existing patterns for file naming; React components are typically `PascalCase`, hooks are `useSomething`, and utilities are `camelCase`.
+## 2. Skill Catalog
 
-## Code Quality & Architecture
+The project maintains structured AI skill packs under `skills/`. Each skill contains a `SKILL.md` (main instructions), `references/` (supporting docs), and optionally `agents/` (agent interface config).
 
-- Avoid code duplication; extract shared components, hooks, and utilities.
-- Keep components focused and prefer composition over mega components.
-- Avoid prop drilling across deep trees; lift shared logic into a local context or store and expose hooks.
-- Push state and data fetching down to the feature entry point that needs it; keep global state minimal.
-- Prefer small, testable units with clear boundaries; prioritize maintainability over cleverness.
+### Available Skills
 
-## React Performance Essentials
+| Skill | Path | Trigger Scenarios |
+|-------|------|-------------------|
+| **Code Review Expert** | `skills/code-review-expert/SKILL.md` | Code review, PR review, security scan, SOLID checks |
+| **Software Design Philosophy** | `skills/software-design-philosophy/SKILL.md` | Module design, API complexity, refactoring, architecture review |
+| **Project Spec** | `skills/moe-copy-ai-project-spec/SKILL.md` | Feature development, interface refactoring, quality gates, test acceptance |
+| **Project Structure** | `skills/moe-copy-ai-project-structure/SKILL.md` | Path lookup, module navigation, dependency management, build pipeline |
 
-- Use `/vercel-react-best-practices` for React components, refactors, and performance work.
-- Use `/web-design-guidelines` for UI work, accessibility, and UX reviews.
-- Prefer existing hooks in `hooks/` (notably `useI18n()`).
-- Parallelize independent async work; avoid waterfalls.
-- Dynamic import heavy components; load optional code only when used.
-- Avoid barrel imports for hot paths; import directly.
-- Prefer derived state and functional setState; keep effect deps primitive.
-- Memoize expensive subtrees; avoid subscribing to state only used in callbacks.
-- Deduplicate global event listeners; clean them up on unmount.
+### Skill-Loading Protocol
 
-## i18n Guidelines
+Agents should proactively load the appropriate `SKILL.md` based on user intent and task type.
 
-- Localization files live in `locales/`; update `locales/en_US.json` first, then `locales/zh_CN.json`.
-- Use flat keys with dot separation (e.g., `exif.camera.model`).
-- Support pluralization with `_one` and `_other` suffixes.
-- Avoid nested key conflicts: a key cannot be both a string value and a parent object.
-  - Bad: `action.tag.mode.and` + `action.tag.mode.and.tooltip`
-  - Good: `action.tag.mode.and` + `action.tag.tooltip.and`
-  - Bad: `photo.share.preview` + `photo.share.preview.download`
-  - Good: `photo.share.preview` + `photo.share.downloadPreview`
+1. **Code review** — When the user requests a review, audit, security check, or pre-PR validation:
+   - Load `skills/code-review-expert/SKILL.md`
+   - Load checklists from `references/` as needed
 
-## Testing Guidelines
+2. **Design & refactoring** — When the user mentions module design, API complexity, shallow modules, complexity management, or references *A Philosophy of Software Design*:
+   - Load `skills/software-design-philosophy/SKILL.md`
+   - Load design principle docs from `references/` as needed
 
-Tests use Vitest with the browser runner (Playwright). Test files match `*.browser.ts` or `*.browser.tsx`. Screenshots and artifacts go to `vitest-test-results/`. There is no explicit coverage gate; add targeted tests when changing extraction, UI flows, or side panel behavior.
+3. **Feature development & quality verification** — When the user works on features, interface refactoring, performance optimization, or needs quality gate confirmation:
+   - Load `skills/moe-copy-ai-project-spec/SKILL.md`
+   - Always read `references/global-prompt.md` first as the global prompt
 
-## Commit & Pull Request Guidelines
+4. **Path lookup & structure navigation** — When the user asks "where is this file", "which module to modify", "dependency relationships", or makes cross-module changes:
+   - Load `skills/moe-copy-ai-project-structure/SKILL.md`
+   - Read `references/project-structure.md` first for entry-point mapping
 
-Commits follow Conventional Commits as seen in history, e.g. `feat(i18n): ...`, `docs: ...`, `fix: ...`. Use a short, scoped summary and present tense. PRs should target the `dev` branch, include a clear description of changes, and link issues when applicable. For UI changes, include screenshots or a short GIF.
+**Combined loading**: Complex tasks may require multiple skills. For example, a refactoring task should load Design Philosophy + Project Spec + Project Structure together.
 
-## Configuration & Security Notes
+---
 
-Do not commit API keys or personal data. Any AI provider settings should be configured through the extension UI rather than hard-coded in source. Keep permissions and manifest changes minimal and document them in the PR.
+## 3. Project Constraints
+
+### Architecture Boundaries
+
+- **Dependency flow**: `popup/options/sidepanel → components → hooks → utils → constants` — no circular deps
+- **Chrome APIs isolation**: Only `background/` and `contents/` access `chrome.*` directly
+- **AI service encapsulation**: All AI calls go through `utils/ai-service.ts`; components use hooks
+- **Storage encapsulation**: Chrome storage wrapped in `utils/storage.ts`; components use `useStorage` hook
+- **Worker isolation**: Web Worker logic in `utils/workers/`; communication via Comlink
+- **i18n**: Always use `useI18n()` hook; update both `locales/en_US.json` and `locales/zh_CN.json`
+- **No feature flags**: App is unreleased — directly modify code
+
+### Quality Gates (Required After Code Changes)
+
+```bash
+pnpm lint              # Biome checks
+pnpm build             # Build verification
+```
+
+### Test Acceptance
+
+```bash
+pnpm test              # Vitest browser tests (watch mode)
+pnpm test:run          # CI mode (single run)
+pnpm test:ui           # Vitest UI mode
+```
+
+- Test files: `*.browser.ts` or `*.browser.tsx`
+- Shared mocks: `utils/__tests__/mocks/`
+- Always `resetMockStorage()` in `beforeEach` for isolation
+- Use `vi.useFakeTimers()` for time-dependent tests
+
+### Change Impact Map
+
+| Change Scope | Affected Files | Required Verification |
+|--------------|---------------|----------------------|
+| Content extraction logic | `utils/extractor.ts`, `utils/extractor/` | Tests + build |
+| AI service | `utils/ai-service.ts` | Tests + build |
+| Message handlers | `background/messages/` | Build + manual test |
+| UI components | `components/` | Build + visual check |
+| Storage logic | `utils/storage.ts` | Tests + build |
+| i18n | `locales/*.json` | Build |
+| Worker logic | `utils/workers/` | Tests + build |
+
+---
+
+## 4. Coding Standards
+
+### Design Principles
+
+Follow the core principles from *A Philosophy of Software Design* (see `skills/software-design-philosophy/SKILL.md` for details):
+
+- Modules should be deep: simple interface, powerful implementation
+- Information hiding: encapsulate design decisions within a single module
+- General-purpose over special-purpose: find the simplest interface that covers all current needs
+- Strategic programming: invest 10-20% extra effort in design improvement
+
+### Development Workflow
+
+1. **Identify boundaries**: Determine whether the requirement belongs to UI entry, background, content script, component, hook, util, or constant
+2. **Diagnose complexity**: Locate complexity sources (component responsibility mixing, hook dependency weight, utils coupling, message protocol, Worker communication, storage race)
+3. **Interface first, then implementation**: Modify interfaces and abstractions before changing implementations
+4. **Incremental changes**: Each change addresses only one class of core complexity
+5. **Quality verification**: Run quality gates and test acceptance after each change
+
+---
+
+## 5. Skill Extension Guide
+
+When adding a new skill, follow this structure:
+
+```
+skills/<skill-name>/
+├── SKILL.md                 # Main instruction file (required)
+├── README.md                # Skill description (optional)
+├── agents/
+│   └── agent.yaml           # Agent interface config (optional)
+└── references/              # Supporting documents (optional)
+    └── *.md
+```
+
+After adding a new skill, update:
+1. This file (`AGENTS.md`) — add to skill catalog
+2. `.claude/skills.md` — add loading entry for Claude Code
+3. `.agents/skills.md` — add loading entry for general agents
